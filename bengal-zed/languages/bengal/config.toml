@@ -1,0 +1,10 @@
+name = "Bengal"
+path_suffixes = ["bl"]
+line_comments = ["// "]
+block_comment = ["/* ", " */"]
+autoclose_before = "\t\n\r)}]>"
+brackets = [
+  { start = "{", end = "}", close = true, newline = true },
+  { start = "[", end = "]", close = true, newline = true },
+  { start = "(", end = ")", close = true, newline = true }
+]
