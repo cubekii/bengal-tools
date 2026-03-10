@@ -106,7 +106,7 @@
       "patterns": [
         {
           "name": "keyword.control.bengal",
-          "match": "\\b(if|else|while|for|return|break|try|catch|throw|private|continue|match|native|fn|let|async|await|const|as|class|enum|use|self)\\b"
+          "match": "\\b(if|else|while|for|return|break|try|catch|throw|private|continue|match|native|fn|let|async|await|const|as|class|enum|interface|type|in|constructor|self)\\b"
         },
         {
           "name": "constant.language.bengal",
