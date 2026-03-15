@@ -1,5 +1,5 @@
 *.vsix
 .idea
-
+target
 # Common
 .DS_Store

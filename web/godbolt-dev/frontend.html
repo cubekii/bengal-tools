@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bengal Compiler Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background: #2d2d30;
+            padding: 10px 20px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        header h1 {
+            font-size: 1.4em;
+            color: #569cd6;
+        }
+        
+        .compile-btn {
+            background: #4ec9b0;
+            color: #1e1e1e;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .compile-btn:hover {
+            background: #3db8a0;
+        }
+        
+        .compile-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        
+        .options {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto;
+        }
+        
+        .options label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .editor-pane, .output-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        
+        .editor-pane {
+            border-right: 1px solid #3e3e42;
+        }
+        
+        .pane-header {
+            background: #252526;
+            padding: 8px 15px;
+            font-size: 0.85em;
+            color: #808080;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .editor-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .line-numbers {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 50px;
+            background: #1e1e1e;
+            color: #858585;
+            padding: 10px 8px;
+            text-align: right;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            user-select: none;
+            overflow: hidden;
+            z-index: 2;
+        }
+        
+        #source-code {
+            position: absolute;
+            left: 50px;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: calc(100% - 50px);
+            height: 100%;
+            background: transparent;
+            color: transparent;
+            caret-color: #d4d4d4;
+            border: none;
+            padding: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            white-space: pre;
+            overflow: auto;
+            z-index: 1;
+        }
+        
+        .code-highlight {
+            position: absolute;
+            left: 50px;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: calc(100% - 50px);
+            height: 100%;
+            padding: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        #source-code::placeholder {
+            color: #555;
+        }
+        
+        .output-container {
+            flex: 1;
+            overflow: auto;
+            background: #1e1e1e;
+        }
+        
+        #assembly-output {
+            padding: 10px 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre;
+            min-height: 100%;
+        }
+        
+        /* Syntax highlighting colors (matching VS Code Dark+ and Bengal.tmLanguage.json) */
+        .keyword { color: #569cd6; }                   /* keyword.control.bengal - if, else, while, etc. */
+        .keyword-operator { color: #d4d4d4; }           /* keyword.operator.bengal - +, -, *, /, etc. */
+        .keyword-import { color: #c586c0; }             /* keyword.control.import.bengal - import, module */
+        .string { color: #ce9178; }                     /* string.quoted.double/triple.bengal */
+        .string-escape { color: #d7ba7d; }              /* constant.character.escape.bengal */
+        .number-float { color: #b5cea8; }               /* constant.numeric.float.bengal */
+        .number-int { color: #b5cea8; }                 /* constant.numeric.integer.bengal */
+        .comment { color: #6a9955; font-style: italic; } /* comment.line.double-slash.bengal */
+        .comment-block { color: #6a9955; font-style: italic; } /* comment.block.bengal */
+        .type { color: #4ec9b0; }                       /* entity.name.type.bengal - PascalCase */
+        .primitive-type { color: #c586c0; }             /* storage.type.bengal - int, float, bool, etc. */
+        .function { color: #dcdcaa; }                   /* entity.name.function.bengal */
+        .constant { color: #569cd6; }                   /* constant.language.bengal - true, false, null */
+        .interpolation { color: #d4d4d4; }              /* meta.interpolation.bengal - ${...} */
+        .interpolation-punct { color: #808080; }        /* punctuation for ${ and } */
+        .module-path { color: #4fc1ff; }                /* entity.name.namespace.bengal - module paths */
+        .variable { color: #9cdcfe; }                   /* variable.other.bengal - inside interpolation */
+        
+        .error {
+            color: #f48771;
+        }
+        
+        .success {
+            color: #4ec9b0;
+        }
+        
+        .loading {
+            color: #808080;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎇 Bengal Compiler Explorer</h1>
+        <div class="options">
+            <label>
+                <input type="checkbox" id="unsafe-fast">
+                Unsafe Fast
+            </label>
+        </div>
+    </header>
+    
+    <div class="main-container">
+        <div class="editor-pane">
+            <div class="pane-header">Source Code</div>
+            <div class="editor-container">
+                <div class="line-numbers" id="line-numbers">1</div>
+                <div class="code-highlight" id="code-highlight"></div>
+                <textarea id="source-code" placeholder="Enter Bengal code here..." spellcheck="false" oninput="updateHighlighting()" onscroll="syncScroll()"></textarea>
+            </div>
+        </div>
+        
+        <div class="output-pane">
+            <div class="pane-header">Bytecode Output</div>
+            <div class="output-container">
+                <div id="assembly-output">; Compile Bengal code to see bytecode output</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const textarea = document.getElementById('source-code');
+        const lineNumbers = document.getElementById('line-numbers');
+        const codeHighlight = document.getElementById('code-highlight');
+        const output = document.getElementById('assembly-output');
+        
+        // Debounce timer for auto-compilation
+        let compileTimer = null;
+        const COMPILE_DELAY = 300; // ms
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function highlightCode(code) {
+            // Token-based highlighting following Bengal.tmLanguage.json
+            // Priority: comments > strings > interpolation > imports > keywords > types > functions > numbers > operators
+            let tokens = [];
+            let pos = 0;
+            const len = code.length;
+            
+            while (pos < len) {
+                // Single-line comment: // ...
+                if (code[pos] === '/' && pos + 1 < len && code[pos + 1] === '/') {
+                    let end = code.indexOf('\n', pos);
+                    if (end === -1) end = len;
+                    tokens.push({ type: 'comment', text: code.slice(pos, end) });
+                    pos = end;
+                    continue;
+                }
+                
+                // Block comment: /* ... */
+                if (code[pos] === '/' && pos + 1 < len && code[pos + 1] === '*') {
+                    let end = code.indexOf('*/', pos + 2);
+                    if (end === -1) end = len;
+                    else end += 2;
+                    tokens.push({ type: 'comment-block', text: code.slice(pos, end) });
+                    pos = end;
+                    continue;
+                }
+                
+                // Triple-quoted string: """ ... """
+                if (pos + 3 <= len && code.slice(pos, pos + 3) === '"""') {
+                    let end = code.indexOf('"""', pos + 3);
+                    if (end === -1) end = len;
+                    else end += 3;
+                    tokens.push({ type: 'string', text: highlightStringContent(code.slice(pos, end)), raw: true });
+                    pos = end;
+                    continue;
+                }
+                
+                // Regular string: " ... "
+                if (code[pos] === '"') {
+                    let end = pos + 1;
+                    while (end < len) {
+                        if (code[end] === '\\' && end + 1 < len) {
+                            end += 2;
+                            continue;
+                        }
+                        if (code[end] === '"') {
+                            end++;
+                            break;
+                        }
+                        end++;
+                    }
+                    tokens.push({ type: 'string', text: highlightStringContent(code.slice(pos, end)), raw: true });
+                    pos = end;
+                    continue;
+                }
+                
+                // Interpolation: ${ ... }
+                if (code[pos] === '$' && pos + 1 < len && code[pos + 1] === '{') {
+                    let depth = 1;
+                    let end = pos + 2;
+                    while (end < len && depth > 0) {
+                        if (code[end] === '{') depth++;
+                        else if (code[end] === '}') depth--;
+                        end++;
+                    }
+                    tokens.push({ type: 'interpolation', text: highlightInterpolation(code.slice(pos, end)), raw: true });
+                    pos = end;
+                    continue;
+                }
+                
+                // Import/Module statements: import x.y.z or module x.y.z
+                if (pos === 0 || /\s/.test(code[pos - 1])) {
+                    let kwMatch = code.slice(pos).match(/^(import|module)\s+([a-zA-Z_][a-zA-Z0-9_]*(?:::[a-zA-Z_][a-zA-Z0-9_]*)*)/);
+                    if (kwMatch) {
+                        tokens.push({ type: 'keyword-import', text: kwMatch[1] });
+                        // Add whitespace
+                        let kwEnd = pos + kwMatch[1].length;
+                        while (kwEnd < len && /\s/.test(code[kwEnd]) && code[kwEnd] !== '\n') {
+                            tokens.push({ type: 'text', text: code[kwEnd] });
+                            kwEnd++;
+                        }
+                        // Add module path
+                        let pathStart = kwEnd;
+                        let pathEnd = pathStart;
+                        while (pathEnd < len && /[a-zA-Z0-9_:]/.test(code[pathEnd])) {
+                            pathEnd++;
+                        }
+                        tokens.push({ type: 'module-path', text: code.slice(pathStart, pathEnd) });
+                        pos = pathEnd;
+                        continue;
+                    }
+                }
+                
+                // Whitespace
+                if (/\s/.test(code[pos])) {
+                    let end = pos + 1;
+                    while (end < len && /\s/.test(code[end])) end++;
+                    tokens.push({ type: 'text', text: code.slice(pos, end) });
+                    pos = end;
+                    continue;
+                }
+                
+                // Identifiers and keywords
+                if (/[a-zA-Z_]/.test(code[pos])) {
+                    let end = pos + 1;
+                    while (end < len && /[a-zA-Z0-9_]/.test(code[end])) end++;
+                    let word = code.slice(pos, end);
+                    
+                    // Check what follows (skip whitespace)
+                    let after = end;
+                    while (after < len && /\s/.test(code[after])) after++;
+                    
+                    // Keywords (keyword.control.bengal)
+                    if (/\b(if|else|while|for|return|break|try|catch|throw|private|continue|match|native|fn|let|async|await|const|as|class|enum|use|self)\b/.test(word)) {
+                        tokens.push({ type: 'keyword', text: word });
+                    }
+                    // Constants (constant.language.bengal)
+                    else if (word === 'true' || word === 'false' || word === 'null') {
+                        tokens.push({ type: 'constant', text: word });
+                    }
+                    // Primitive types (storage.type.bengal)
+                    else if (/\b(int|float|bool|char|str|void|any)\b/.test(word)) {
+                        tokens.push({ type: 'primitive-type', text: word });
+                    }
+                    // Type names (entity.name.type.bengal) - PascalCase not followed by (
+                    else if (/[A-Z]/.test(word[0]) && code[after] !== '(') {
+                        tokens.push({ type: 'type', text: word });
+                    }
+                    // Function names (entity.name.function.bengal) - lowercase followed by (
+                    else if (code[after] === '(' && !/[A-Z]/.test(word[0])) {
+                        tokens.push({ type: 'function', text: word });
+                    }
+                    // Regular identifier
+                    else {
+                        tokens.push({ type: 'text', text: word });
+                    }
+                    pos = end;
+                    continue;
+                }
+                
+                // Numbers (constant.numeric.float.bengal and constant.numeric.integer.bengal)
+                if (/[0-9]/.test(code[pos])) {
+                    let end = pos;
+                    let hasDot = false;
+                    while (end < len) {
+                        if (/[0-9]/.test(code[end])) {
+                            end++;
+                        } else if (code[end] === '.' && !hasDot && end + 1 < len && /[0-9]/.test(code[end + 1])) {
+                            hasDot = true;
+                            end++;
+                        } else {
+                            break;
+                        }
+                    }
+                    let numType = hasDot ? 'number-float' : 'number-int';
+                    tokens.push({ type: numType, text: code.slice(pos, end) });
+                    pos = end;
+                    continue;
+                }
+                
+                // Operators and punctuation (keyword.operator.bengal)
+                let op = code[pos];
+                if (pos + 1 < len) {
+                    let twoChar = code.slice(pos, pos + 2);
+                    if (['==', '!=', '<=', '>=', '&&', '||', '<<', '>>', '->', '=>', '::'].includes(twoChar)) {
+                        tokens.push({ type: 'keyword-operator', text: twoChar });
+                        pos += 2;
+                        continue;
+                    }
+                }
+                if (['+', '-', '*', '/', '%', '=', '<', '>', '!', '&', '|', '^', '.', ',', ';', ':', '(', ')', '[', ']', '{', '}', '?'].includes(op)) {
+                    tokens.push({ type: 'keyword-operator', text: op });
+                    pos++;
+                    continue;
+                }
+                
+                // Unknown character
+                tokens.push({ type: 'text', text: code[pos] });
+                pos++;
+            }
+            
+            // Build HTML
+            let html = '';
+            for (let token of tokens) {
+                if (token.raw) {
+                    html += token.text;
+                } else if (token.type === 'text') {
+                    html += escapeHtml(token.text);
+                } else {
+                    html += '<span class="' + token.type + '">' + escapeHtml(token.text) + '</span>';
+                }
+            }
+            return html;
+        }
+        
+        function highlightStringContent(str) {
+            // Highlight escape sequences (constant.character.escape.bengal)
+            str = str.replace(/(\\[\\"nrt0])/g, '<span class="string-escape">$1</span>');
+            // Highlight interpolation inside strings
+            str = str.replace(/(\$\{[^}]*\})/g, '<span class="interpolation">$1</span>');
+            return str;
+        }
+        
+        function highlightInterpolation(str) {
+            // Highlight interpolation contents with nested syntax (meta.interpolation.bengal)
+            // ${ ... } - highlight the braces and contents
+            let content = str.slice(2, -1); // Remove ${ and }
+            let highlightedContent = highlightCode(content);
+            return '<span class="interpolation-punct">${</span>' + highlightedContent + '<span class="interpolation-punct">}</span>';
+        }
+        
+        function updateHighlighting() {
+            const code = textarea.value;
+            codeHighlight.innerHTML = highlightCode(code) + '<br>';
+            updateLineNumbers();
+        }
+        
+        function updateLineNumbers() {
+            const lines = textarea.value.split('\n').length;
+            lineNumbers.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('<br>');
+        }
+        
+        function syncScroll() {
+            lineNumbers.scrollTop = textarea.scrollTop;
+            codeHighlight.scrollTop = textarea.scrollTop;
+            codeHighlight.scrollLeft = textarea.scrollLeft;
+        }
+        
+        async function compile() {
+            const source = textarea.value;
+            const unsafeFast = document.getElementById('unsafe-fast').checked;
+            
+            output.innerHTML = '<span class="loading">; Compiling...</span>';
+            
+            try {
+                const response = await fetch('/compile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source, unsafe_fast: unsafeFast })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    let html = '';
+                    const lines = result.assembly.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith(';')) {
+                            html += '<span class="comment">' + escapeHtml(line) + '</span>\n';
+                        } else if (line.trim()) {
+                            html += escapeHtml(line) + '\n';
+                        } else {
+                            html += '\n';
+                        }
+                    }
+                    output.innerHTML = html;
+                } else {
+                    output.innerHTML = '<span class="error">Compilation Error:\n' + escapeHtml(result.error) + '</span>';
+                }
+            } catch (e) {
+                output.innerHTML = '<span class="error">Error: ' + escapeHtml(e.message) + '</span>';
+            }
+        }
+        
+        // Debounced compile - triggers after user stops typing
+        function scheduleCompile() {
+            if (compileTimer) {
+                clearTimeout(compileTimer);
+            }
+            compileTimer = setTimeout(compile, COMPILE_DELAY);
+        }
+        
+        textarea.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                compile();
+            }
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                textarea.value = textarea.value.substring(0, start) + '    ' + textarea.value.substring(end);
+                textarea.selectionStart = textarea.selectionEnd = start + 4;
+                updateHighlighting();
+                scheduleCompile();
+            }
+        });
+        
+        // Auto-compile on input changes
+        textarea.addEventListener('input', () => {
+            updateHighlighting();
+            scheduleCompile();
+        });
+        
+        // Initial compile
+        updateHighlighting();
+        scheduleCompile();
+    </script>
+</body>
+</html>
