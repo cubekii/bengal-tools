@@ -8,7 +8,7 @@ use yew::prelude::*;
 
 #[function_component]
 fn App() -> Html {
-    let source = use_state(|| String::from("fn main() {\n    let x = 42;\n    print(x);\n}"));
+    let source = use_state(|| String::from("import std.io\nprintln(\"hello world!\")"));
     let output = use_state(|| String::new());
     let unsafe_fast = use_state(|| false);
     let is_compiling = use_state(|| false);
@@ -131,12 +131,12 @@ fn App() -> Html {
                         </div>
                         <div
                             ref={highlight_ref}
-                            style="position: absolute; top: 0; left: 4rem; right: 0; bottom: 0; padding: 1rem; color: #d4d4d4; pointer-events: none; white-space: pre; overflow: hidden;"
+                            style="position: absolute; top: 0; left: 4rem; right: 0; bottom: 0; padding: 1rem; color: #ffffff; pointer-events: none; white-space: pre; overflow: hidden;"
                             dangerously_set_inner_html={(*highlighted_code).clone()}
                         ></div>
                         <textarea
                             ref={textarea_ref}
-                            style="position: absolute; top: 0; left: 4rem; right: 0; bottom: 0; padding: 1rem; background: transparent; color: transparent; caret-color: white; border: none; outline: none; resize: none; font-family: monospace; font-size: 14px; line-height: 1.5;"
+                            style="position: absolute; top: 0; left: 4rem; right: 0; bottom: 0; padding: 1rem; background: transparent; color: rgba(0, 0, 0, 0); caret-color: white; border: none; outline: none; resize: none; font-family: monospace; font-size: 14px; line-height: 1.5;"
                             value={(*source).clone()}
                             oninput={on_source_change}
                             spellcheck="false"
