@@ -105,6 +105,26 @@ fn App() -> Html {
 
     html! {
         <div style="display: flex; flex-direction: column; height: 100vh; font-family: monospace;">
+            <style>{r#"
+                .keyword { color: #c586c0; font-weight: bold; }
+                .keyword-operator { color: #d4d4d4; }
+                .keyword-import { color: #c586c0; font-weight: bold; }
+                .string { color: #ce9178; }
+                .number-float { color: #b5cea8; }
+                .number-int { color: #b5cea8; }
+                .comment { color: #6a9955; font-style: italic; }
+                .comment-block { color: #6a9955; font-style: italic; }
+                .type { color: #4ec9b0; }
+                .primitive-type { color: #4ec9b0; font-weight: bold; }
+                .function { color: #dcdcaa; }
+                .constant { color: #569cd6; font-weight: bold; }
+                .interpolation { color: #d4d4d4; }
+                .interpolation-punct { color: #c586c0; }
+                .module-path { color: #4ec9b0; }
+                .variable { color: #9cdcfe; }
+                .text { color: #d4d4d4; }
+                .error { color: #f48771; }
+            "#}</style>
             <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #1e1e1e; color: white;">
                 <h1 style="margin: 0; font-size: 1.5rem;">{ "🎇 Bengal Compiler Explorer" }</h1>
                 <div class="options">
@@ -210,7 +230,6 @@ enum TokenType {
     KeywordOperator,
     KeywordImport,
     String,
-    StringEscape,
     NumberFloat,
     NumberInt,
     Comment,
@@ -220,7 +239,6 @@ enum TokenType {
     Function,
     Constant,
     Interpolation,
-    InterpolationPunct,
     ModulePath,
     Variable,
     Text,
@@ -233,7 +251,6 @@ impl TokenType {
             TokenType::KeywordOperator => "keyword-operator",
             TokenType::KeywordImport => "keyword-import",
             TokenType::String => "string",
-            TokenType::StringEscape => "string-escape",
             TokenType::NumberFloat => "number-float",
             TokenType::NumberInt => "number-int",
             TokenType::Comment => "comment",
@@ -243,7 +260,6 @@ impl TokenType {
             TokenType::Function => "function",
             TokenType::Constant => "constant",
             TokenType::Interpolation => "interpolation",
-            TokenType::InterpolationPunct => "interpolation-punct",
             TokenType::ModulePath => "module-path",
             TokenType::Variable => "variable",
             TokenType::Text => "text",
@@ -456,7 +472,7 @@ fn tokenize(code: &str) -> Vec<Token> {
                 });
             } else {
                 tokens.push(Token {
-                    token_type: TokenType::Text,
+                    token_type: TokenType::Variable,
                     text: word.to_string(),
                     raw: false,
                 });
