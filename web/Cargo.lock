@@ -28,7 +28,10 @@ dependencies = [
  "bengal-compiler",
  "bytecode-viewer",
  "console_error_panic_hook",
+ "js-sys",
+ "sparkler",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
  "yew",
 ]
@@ -761,8 +764,12 @@ version = "0.1.0"
 source = "git+https://github.com/Nelonn/bengal#2f84d4d819de38d1712e94cb13ed6571f7f0f907"
 dependencies = [
  "async-recursion",
+ "js-sys",
  "serde",
  "tokio",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

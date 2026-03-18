@@ -1,5 +1,4 @@
 use bengal_compiler::compiler::{Compiler, CompilerOptions};
-use bytecode_viewer;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlDivElement, HtmlInputElement, HtmlTextAreaElement, Window};
@@ -203,7 +202,7 @@ fn compile_source(source: &str, unsafe_fast: bool) -> String {
 
     match compiler.compile_with_options(&options) {
         Ok(bytecode) => {
-            let output = bytecode_viewer::display_bytecode(&bytecode);
+            let output = display_bytecode_to_string(&bytecode);
             if output.is_empty() {
                 format!("# Compilation succeeded but no bytecode generated\n# Source: {} bytes", source.len())
             } else {
@@ -215,6 +214,248 @@ fn compile_source(source: &str, unsafe_fast: bool) -> String {
             format!("Compilation Error:\n{}", error_msg)
         }
     }
+}
+
+fn display_bytecode_to_string(bytecode: &sparkler::Bytecode) -> String {
+    let mut output = String::new();
+    
+    output.push_str("# Bytecode Viewer - Bengal\n\n");
+    
+    // Display .data section (constants)
+    output.push_str(".data\n");
+    for (i, s) in bytecode.strings.iter().enumerate() {
+        output.push_str(&format!("  str.{:<4} = \"{}\"\n", i, escape_string(s)));
+    }
+    for class in &bytecode.classes {
+        output.push_str(&format!("  class.{} =\n", class.name));
+        for (field_name, field_value) in &class.fields {
+            output.push_str(&format!("    .{} = {:?}\n", field_name, field_value));
+        }
+    }
+    output.push('\n');
+    
+    // Display module-level (root) code
+    if !bytecode.data.is_empty() {
+        output.push_str(".root:\n");
+        output.push_str("# module-level code\n");
+        let mut pc = 0;
+        let data = &bytecode.data;
+        while pc < data.len() {
+            let opcode_byte = data[pc];
+            let opcode = opcode_from_byte(opcode_byte);
+            let address = format!("{:04x}", pc);
+            let (opcode_name, operands, operand_count) = decode_instruction(data, pc, opcode, &bytecode.strings);
+            if operands.is_empty() {
+                output.push_str(&format!("  {} | {}\n", address, opcode_name));
+            } else {
+                output.push_str(&format!("  {} | {:<18} | {}\n", address, opcode_name, operands));
+            }
+            pc += 1 + operand_count;
+        }
+        output.push('\n');
+    }
+    
+    // Display functions
+    for function in &bytecode.functions {
+        output.push_str(&format!("{}:\n", function.name));
+        output.push_str(&format!("# registers: {}, source: {:?}\n", function.register_count, function.source_file));
+        let mut pc = 0;
+        let data = &function.bytecode;
+        while pc < data.len() {
+            let opcode_byte = data[pc];
+            let opcode = opcode_from_byte(opcode_byte);
+            let address = format!("{:04x}", pc);
+            let (opcode_name, operands, operand_count) = decode_instruction(data, pc, opcode, &bytecode.strings);
+            if operands.is_empty() {
+                output.push_str(&format!("  {} | {}\n", address, opcode_name));
+            } else {
+                output.push_str(&format!("  {} | {:<18} | {}\n", address, opcode_name, operands));
+            }
+            pc += 1 + operand_count;
+        }
+        output.push('\n');
+    }
+    
+    output
+}
+
+fn opcode_from_byte(byte: u8) -> sparkler::Opcode {
+    use sparkler::Opcode;
+    match byte {
+        0x00 => Opcode::Nop,
+        0x10 => Opcode::LoadConst,
+        0x11 => Opcode::LoadInt,
+        0x12 => Opcode::LoadFloat,
+        0x13 => Opcode::LoadBool,
+        0x14 => Opcode::LoadNull,
+        0x20 => Opcode::Move,
+        0x21 => Opcode::LoadLocal,
+        0x22 => Opcode::StoreLocal,
+        0x30 => Opcode::GetProperty,
+        0x31 => Opcode::SetProperty,
+        0x40 => Opcode::Call,
+        0x41 => Opcode::CallNative,
+        0x42 => Opcode::Invoke,
+        0x43 => Opcode::Return,
+        0x44 => Opcode::CallAsync,
+        0x45 => Opcode::CallNativeAsync,
+        0x46 => Opcode::InvokeAsync,
+        0x47 => Opcode::Await,
+        0x48 => Opcode::Spawn,
+        0x49 => Opcode::InvokeInterface,
+        0x4A => Opcode::InvokeInterfaceAsync,
+        0x4B => Opcode::CallNativeIndexed,
+        0x4C => Opcode::CallNativeIndexedAsync,
+        0x50 => Opcode::Jump,
+        0x51 => Opcode::JumpIfTrue,
+        0x52 => Opcode::JumpIfFalse,
+        0x60 => Opcode::Equal,
+        0x61 => Opcode::NotEqual,
+        0x62 => Opcode::And,
+        0x63 => Opcode::Or,
+        0x64 => Opcode::Not,
+        0x65 => Opcode::Concat,
+        0x66 => Opcode::Greater,
+        0x67 => Opcode::Less,
+        0x68 => Opcode::Add,
+        0x69 => Opcode::Subtract,
+        0x6A => Opcode::GreaterEqual,
+        0x6B => Opcode::LessEqual,
+        0x70 => Opcode::Multiply,
+        0x71 => Opcode::Divide,
+        0x74 => Opcode::Convert,
+        0x75 => Opcode::Modulo,
+        0x76 => Opcode::Array,
+        0x77 => Opcode::Index,
+        0x73 => Opcode::Line,
+        0x78 => Opcode::BitAnd,
+        0x79 => Opcode::BitOr,
+        0x7A => Opcode::BitXor,
+        0x7B => Opcode::BitNot,
+        0x7C => Opcode::ShiftLeft,
+        0x7D => Opcode::ShiftRight,
+        0x80 => Opcode::TryStart,
+        0x81 => Opcode::TryEnd,
+        0x82 => Opcode::Throw,
+        0x90 => Opcode::Breakpoint,
+        0xFF => Opcode::Halt,
+        _ => Opcode::Nop,
+    }
+}
+
+fn decode_instruction(data: &[u8], pc: usize, opcode: sparkler::Opcode, strings: &[String]) -> (String, String, usize) {
+    match opcode {
+        sparkler::Opcode::Nop => ("NOP".to_string(), String::new(), 0),
+        sparkler::Opcode::LoadConst => {
+            if pc + 2 < data.len() {
+                let str_idx = data[pc + 2] as usize;
+                let value = strings.get(str_idx)
+                    .map(|s| format!("\"{}\"", escape_string(s)))
+                    .unwrap_or_else(|| format!("str.{}", str_idx));
+                (format!("LOAD_CONST R{}", data[pc + 1]), value, 2)
+            } else {
+                ("LOAD_CONST".to_string(), String::new(), 0)
+            }
+        }
+        sparkler::Opcode::LoadInt => {
+            if pc + 10 <= data.len() {
+                let value = i64::from_le_bytes([
+                    data[pc + 2], data[pc + 3], data[pc + 4], data[pc + 5],
+                    data[pc + 6], data[pc + 7], data[pc + 8], data[pc + 9],
+                ]);
+                (format!("LOAD_INT R{}", data[pc + 1]), format!("{}", value), 9)
+            } else {
+                ("LOAD_INT".to_string(), String::new(), 0)
+            }
+        }
+        sparkler::Opcode::LoadFloat => {
+            if pc + 10 <= data.len() {
+                let value = f64::from_le_bytes([
+                    data[pc + 2], data[pc + 3], data[pc + 4], data[pc + 5],
+                    data[pc + 6], data[pc + 7], data[pc + 8], data[pc + 9],
+                ]);
+                (format!("LOAD_FLOAT R{}", data[pc + 1]), format!("{}", value), 9)
+            } else {
+                ("LOAD_FLOAT".to_string(), String::new(), 0)
+            }
+        }
+        sparkler::Opcode::LoadBool => {
+            if pc + 2 < data.len() {
+                let value = data[pc + 2] != 0;
+                (format!("LOAD_BOOL R{}", data[pc + 1]), format!("{}", value), 2)
+            } else {
+                ("LOAD_BOOL".to_string(), String::new(), 0)
+            }
+        }
+        sparkler::Opcode::LoadNull => {
+            if pc + 1 < data.len() {
+                (format!("LOAD_NULL R{}", data[pc + 1]), String::new(), 1)
+            } else {
+                ("LOAD_NULL".to_string(), String::new(), 0)
+            }
+        }
+        sparkler::Opcode::Move => {
+            if pc + 2 < data.len() {
+                (format!("MOVE R{}, R{}", data[pc + 1], data[pc + 2]), String::new(), 2)
+            } else {
+                ("MOVE".to_string(), String::new(), 0)
+            }
+        }
+        sparkler::Opcode::LoadLocal => {
+            if pc + 2 < data.len() {
+                let name_idx = data[pc + 2] as usize;
+                let name = strings.get(name_idx)
+                    .map(|s| s.clone())
+                    .unwrap_or_else(|| format!("str.{}", name_idx));
+                (format!("LOAD_LOCAL R{}", data[pc + 1]), format!("\"{}\"", name), 2)
+            } else {
+                ("LOAD_LOCAL".to_string(), String::new(), 0)
+            }
+        }
+        sparkler::Opcode::StoreLocal => {
+            if pc + 2 < data.len() {
+                let name_idx = data[pc + 1] as usize;
+                let name = strings.get(name_idx)
+                    .map(|s| s.clone())
+                    .unwrap_or_else(|| format!("str.{}", name_idx));
+                (format!("STORE_LOCAL R{}", data[pc + 2]), format!("\"{}\"", name), 2)
+            } else {
+                ("STORE_LOCAL".to_string(), String::new(), 0)
+            }
+        }
+        sparkler::Opcode::Return => {
+            if pc + 1 < data.len() {
+                (format!("RETURN R{}", data[pc + 1]), String::new(), 1)
+            } else {
+                ("RETURN".to_string(), String::new(), 0)
+            }
+        }
+        sparkler::Opcode::Jump => {
+            if pc + 2 < data.len() {
+                let target = u16::from_le_bytes([data[pc + 1], data[pc + 2]]);
+                (format!("JUMP"), format!("-> {:04x}", target), 2)
+            } else {
+                ("JUMP".to_string(), String::new(), 0)
+            }
+        }
+        sparkler::Opcode::JumpIfFalse => {
+            if pc + 3 < data.len() {
+                let target = u16::from_le_bytes([data[pc + 2], data[pc + 3]]);
+                (format!("JUMP_IF_FALSE R{}", data[pc + 1]), format!("-> {:04x}", target), 3)
+            } else {
+                ("JUMP_IF_FALSE".to_string(), String::new(), 0)
+            }
+        }
+        _ => (format!("{:?}", opcode), String::new(), 0)
+    }
+}
+
+fn escape_string(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace('\t', "\\t")
 }
 
 fn format_output(output: &str) -> String {
