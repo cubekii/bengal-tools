@@ -33,15 +33,19 @@ fn display_data_section(bytecode: &Bytecode) -> String {
     output.push_str("  .data\n");
 
     // Display string constants
-    for (i, s) in bytecode.strings.iter().enumerate() {
-        output.push_str(&format!("    str.{:<4} = \"{}\"\n", i, escape_string(s)));
-    }
+    if bytecode.strings.is_empty() && bytecode.classes.is_empty() {
+        output.push_str("    # no constants\n");
+    } else {
+        for (i, s) in bytecode.strings.iter().enumerate() {
+            output.push_str(&format!("    str.{:<4} = \"{}\"\n", i, escape_string(s)));
+        }
 
-    // Display class information
-    for class in &bytecode.classes {
-        output.push_str(&format!("    class.{} =\n", class.name));
-        for (field_name, field_value) in &class.fields {
-            output.push_str(&format!("      .{} = {:?}\n", field_name, field_value));
+        // Display class information
+        for class in &bytecode.classes {
+            output.push_str(&format!("    class.{} =\n", class.name));
+            for (field_name, field_value) in &class.fields {
+                output.push_str(&format!("      .{} = {:?}\n", field_name, field_value));
+            }
         }
     }
 
@@ -54,6 +58,8 @@ fn display_root_code(bytecode: &Bytecode) -> String {
     let mut output = String::new();
 
     if bytecode.data.is_empty() {
+        output.push_str("  .root:\n");
+        output.push_str("    # no module-level code\n\n");
         return output;
     }
 

@@ -150,13 +150,12 @@ fn App() -> Html {
                     <div style="flex: 1; overflow: auto; background: #1e1e1e; padding: 1rem;">
                         <div
                             class="assembly-output"
-                            style="color: #d4d4d4; white-space: pre; font-family: monospace; font-size: 14px; line-height: 1.5;"
+                            style="color: #d4d4d4; white-space: pre-wrap; font-family: monospace; font-size: 14px; line-height: 1.5;"
                             dangerously_set_inner_html={(*formatted_output).clone()}
-                        ></div>
+                        >{formatted_output}</div>
                     </div>
                 </div>
             </div>
-
             if *is_compiling {
                 <div style="position: fixed; bottom: 1rem; right: 1rem; background: #007acc; color: white; padding: 0.5rem 1rem; border-radius: 4px;">{ "Compiling..." }</div>
             }
@@ -175,30 +174,26 @@ fn compile_source(source: &str, unsafe_fast: bool) -> String {
     };
 
     match compiler.compile_with_options(&options) {
-        Ok(bytecode) => bytecode_viewer::display_bytecode(&bytecode),
+        Ok(bytecode) => {
+            let output = bytecode_viewer::display_bytecode(&bytecode);
+            if output.is_empty() {
+                format!("# Compilation succeeded but no bytecode generated\n# Source: {} bytes", source.len())
+            } else {
+                output
+            }
+        }
         Err(e) => {
             let error_msg: String = e.to_string();
-            format!("<span class=\"error\">Compilation Error:\n{}</span>", escape_html(&error_msg))
+            format!("Compilation Error:\n{}", error_msg)
         }
     }
 }
 
 fn format_output(output: &str) -> String {
-    let mut html = String::new();
-    for line in output.lines() {
-        if line.trim().is_empty() {
-            html.push_str("<br>");
-        } else if line.trim().starts_with('#') {
-            // Bytecode viewer uses # for comments
-            html.push_str(&format!(
-                "<span class=\"comment\">{}</span><br>",
-                escape_html(line)
-            ));
-        } else {
-            html.push_str(&format!("{}<br>", escape_html(line)));
-        }
+    if output.is_empty() {
+        return String::from("# No output generated");
     }
-    html
+    escape_html(output)
 }
 
 fn escape_html(text: &str) -> String {
