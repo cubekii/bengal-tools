@@ -16,7 +16,7 @@ dependencies = [
 [[package]]
 name = "bengal-compiler"
 version = "0.1.0"
-source = "git+https://github.com/Nelonn/bengal#e75af105b453dba4ca6c0f91bdf4bd2ce030b1e0"
+source = "git+https://github.com/Nelonn/bengal#2f84d4d819de38d1712e94cb13ed6571f7f0f907"
 dependencies = [
  "sparkler",
 ]
@@ -26,9 +26,12 @@ name = "bengal-web"
 version = "0.1.0"
 dependencies = [
  "bengal-compiler",
+ "bytecode-viewer",
  "console_error_panic_hook",
+ "js-sys",
  "sparkler",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
  "yew",
 ]
@@ -53,6 +56,14 @@ name = "bumpalo"
 version = "3.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d20789868f4b01b2f2caec9f5c4e0213b41e3e5702a50157d699ae31ced2fcb"
+
+[[package]]
+name = "bytecode-viewer"
+version = "0.1.0"
+source = "git+https://github.com/Nelonn/bengal#2f84d4d819de38d1712e94cb13ed6571f7f0f907"
+dependencies = [
+ "sparkler",
+]
 
 [[package]]
 name = "bytes"
@@ -750,7 +761,7 @@ dependencies = [
 [[package]]
 name = "sparkler"
 version = "0.1.0"
-source = "git+https://github.com/Nelonn/bengal#e75af105b453dba4ca6c0f91bdf4bd2ce030b1e0"
+source = "git+https://github.com/Nelonn/bengal#2f84d4d819de38d1712e94cb13ed6571f7f0f907"
 dependencies = [
  "async-recursion",
  "js-sys",

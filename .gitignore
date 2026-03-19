@@ -1,5 +1,7 @@
 *.vsix
 .idea
+# WASM IGNORE
 target
+dist
 # Common
 .DS_Store
