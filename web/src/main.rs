@@ -810,7 +810,7 @@ fn find_import_or_module(code: &str) -> Option<(String, String, usize)> {
                 let trimmed = rest.trim_start();
                 let mut path_end = 0;
                 for (i, c) in trimmed.char_indices() {
-                    if c.is_alphanumeric() || c == '_' || c == ':' {
+                    if c.is_alphanumeric() || c == '_' || c == ':' || c == '.' {
                         path_end = i + 1;
                     } else {
                         break;
