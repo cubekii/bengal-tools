@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feat/godbolt-dep
     paths:
       - 'web/**'
       - '.github/workflows/deploy.yml'
@@ -27,7 +28,7 @@ jobs:
 
       - name: Build with trunk
         working-directory: ./web
-        run: trunk build --release
+        run: trunk build --release --public-url ./
 
       - name: Deploy to nelonn.github.io
         uses: peaceiris/actions-gh-pages@v4
@@ -37,4 +38,4 @@ jobs:
           destination_dir: bengal-web/${{ github.ref_name }}
           external_repository: nelonn/nelonn.github.io
           publish_branch: main
-          force_orphan: true
+          keep_files: true
