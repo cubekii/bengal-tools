@@ -28,7 +28,7 @@ jobs:
 
       - name: Build with trunk
         working-directory: ./web
-        run: trunk build --release --public-url ./
+        run: trunk build --release --public-url /bengal-web/${{ github.ref_name }}/
 
       - name: Deploy to nelonn.github.io
         uses: peaceiris/actions-gh-pages@v4
