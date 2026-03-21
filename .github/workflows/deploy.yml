@@ -5,9 +5,9 @@ on:
     branches:
       - main
       - feat/godbolt-subdir
-    paths:
-      - 'web/**'
-      - '.github/workflows/deploy.yml'
+    #paths:
+    #  - 'web/**'
+    #  - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 jobs:
