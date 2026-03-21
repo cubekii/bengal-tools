@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - feat/godbolt-dep
+      - feat/godbolt-subdir
     paths:
       - 'web/**'
       - '.github/workflows/deploy.yml'
